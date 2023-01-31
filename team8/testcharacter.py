@@ -7,17 +7,22 @@ from entity import CharacterEntity
 from colorama import Fore, Back
 
 class TestCharacter(CharacterEntity):
-
+    move_count = 0
+    path_plan = True 
+    
     def do(self, wrld):
-        
-        start = (self.x,self.y)
-        goal = wrld.exitcell
-        came_from, cost_incurred = self.A_star(wrld,start,goal)
-        path = self.get_path(came_from, start, goal)
-        for i in range(len(path)):
-            dx, dy = self.extract_move(path[i])
-            self.set_cell_color(path[i][0], path[i][1],  Back.GREEN)
+        if self.path_plan:
+            start = (self.x,self.y)
+            goal = wrld.exitcell
+            came_from, cost_incurred = self.A_star(wrld,start,goal)
+            self.path = self.get_path(came_from, start, goal)
+            self.path_plan = False
+
+        else:
+            dx, dy = self.extract_move(self.path[self.move_count])
+            self.set_cell_color(self.path[self.move_count][0], self.path[self.move_count][1], Back.RED)
             self.move(dx, dy)
+            self.move_count+=1
 
   
 
