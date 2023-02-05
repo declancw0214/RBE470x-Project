@@ -15,25 +15,27 @@ class TestCharacter(CharacterEntity):
     def do(self, wrld):
         start = (self.x,self.y)
         monster_prox = self.is_monster_in_proximity(wrld)
-
-        if  monster_prox[0] != False:
+        if self.move_count == len(self.path):
             self.path_plan = True
-            print (monster_prox)
+
+        if  monster_prox[0] == True:
+        
             best_move = self.run_expectimax(wrld,monster_prox[1])
-            self.path.append((0,0))
+            self.path.clear()
             self.path.append(best_move)
-            self.path.append((0,0))
+
             self.move_count = 0
+            
 
         if self.path_plan:
             came_from, cost_incurred = self.A_star(wrld)
             self.path = self.get_path(came_from, wrld)
             self.path_plan = False
-
-        dx, dy = self.extract_move(self.path[self.move_count])
-        self.set_cell_color(self.path[self.move_count][0], self.path[self.move_count][1], Back.RED)
-        self.move(dx, dy)
-        self.move_count+=1
+        if self.path != []:
+            dx, dy = self.extract_move(self.path[self.move_count])
+            self.set_cell_color(self.path[self.move_count][0], self.path[self.move_count][1], Back.RED)
+            self.move(dx, dy)
+            self.move_count+=1
 
     def run_expectimax(self,wrld,mnstr_loc):
         potential_moves =self.build_tree(wrld,mnstr_loc)
@@ -68,14 +70,14 @@ class TestCharacter(CharacterEntity):
         utilities = []
         start_distance =self.get_Gn(chtr_loc, mnstr_loc)
 
-        pot_mnstr_moves = self.get_possible_moves(wrld,mnstr_loc,True, False)
+        pot_mnstr_moves = self.get_possible_moves(wrld,mnstr_loc,True,False)
         for Mmove in pot_mnstr_moves:
             M_loc_moved = (mnstr_loc[0]+Mmove[0],mnstr_loc[1]+Mmove[1])
             new_dist = self.get_Hn(C_loc_moved, M_loc_moved)
             if new_dist == 0:
                 utilities.append(-10)
             else:
-                utilities.append((new_dist-start_distance))
+                utilities.append(2*(new_dist-start_distance))
         return utilities
 
     def A_star(self,wrld):
@@ -122,6 +124,8 @@ class TestCharacter(CharacterEntity):
                                         neighbors.append((dx, dy))
                                     else:
                                         neighbors.append((loc[0] + dx, loc[1] + dy))
+                            else:
+                                continue
                         else:
                             if((not wrld.wall_at(loc[0]  + dx, loc[1] + dy)) and
                                 ((loc[0]  + dx, loc[1] + dy)!= (loc[0] ,loc[1]))):
