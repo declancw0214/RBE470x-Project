@@ -5,28 +5,84 @@ sys.path.insert(0, '../bomberman')
 # Import necessary stuff
 from entity import CharacterEntity
 from colorama import Fore, Back
+import math
 
 class TestCharacter(CharacterEntity):
     move_count = 0
     path_plan = True 
-    
+    path = []
+    depth = 1
     def do(self, wrld):
-        if self.path_plan:
-            start = (self.x,self.y)
-            goal = wrld.exitcell
-            came_from, cost_incurred = self.A_star(wrld,start,goal)
-            self.path = self.get_path(came_from, start, goal)
-            self.path_plan = False
+        start = (self.x,self.y)
+        monster_prox = self.is_monster_in_proximity(wrld)
+        if self.move_count == len(self.path):
+            self.path_plan = True
 
-        else:
+        if  monster_prox[0] == True:
+        
+            best_move = self.run_expectimax(wrld,monster_prox[1])
+            self.path.clear()
+            self.path.append(best_move)
+
+            self.move_count = 0
+            
+
+        if self.path_plan:
+            came_from, cost_incurred = self.A_star(wrld)
+            self.path = self.get_path(came_from, wrld)
+            self.path_plan = False
+        if self.path != []:
             dx, dy = self.extract_move(self.path[self.move_count])
             self.set_cell_color(self.path[self.move_count][0], self.path[self.move_count][1], Back.RED)
             self.move(dx, dy)
             self.move_count+=1
 
-  
+    def run_expectimax(self,wrld,mnstr_loc):
+        potential_moves =self.build_tree(wrld,mnstr_loc)
+        highest_value = -math.inf
+        move_to_take = (0,0)
+        for aMove in potential_moves:
+            if aMove[1]>highest_value:
+                move_to_take = aMove[0]
+        return move_to_take
 
-    def A_star(self,wrld, start, goal):
+
+    def build_tree(self,wrld,mnstr_loc):
+        chtr_loc = (self.x,self.y)
+        #chance_node list of tuples (action, expected value)
+        chance_node: list [tuple(tuple, float)] = []
+
+        pot_chtr_moves = self.get_possible_moves(wrld,chtr_loc,True,True)
+
+        for Cmove in pot_chtr_moves:
+            utilities = self.build_T_nodes(wrld,mnstr_loc, Cmove)
+            probability = (1/len(utilities))
+            expectedValue= 0
+            for aReward in utilities:
+                expectedValue += (aReward*probability)
+            chance_node.append((Cmove,expectedValue))
+        return chance_node
+
+    def build_T_nodes(self,wrld,mnstr_loc, Cmove):
+        chtr_loc = (self.x,self.y)
+        C_loc_moved = (chtr_loc[0] + Cmove[0], chtr_loc[1]+Cmove[1])
+
+        utilities = []
+        start_distance =self.get_Gn(chtr_loc, mnstr_loc)
+
+        pot_mnstr_moves = self.get_possible_moves(wrld,mnstr_loc,True,False)
+        for Mmove in pot_mnstr_moves:
+            M_loc_moved = (mnstr_loc[0]+Mmove[0],mnstr_loc[1]+Mmove[1])
+            new_dist = self.get_Hn(C_loc_moved, M_loc_moved)
+            if new_dist == 0:
+                utilities.append(-10)
+            else:
+                utilities.append(2*(new_dist-start_distance))
+        return utilities
+
+    def A_star(self,wrld):
+        start = (self.x,self.y)
+        goal = wrld.exitcell
         frontier = PriorityQueue()
         frontier.put(start,0)
         came_from = {}  
@@ -35,13 +91,13 @@ class TestCharacter(CharacterEntity):
         cost_incurred[start]=0
 
         while not frontier.empty():
-            current  =frontier.get()
+            current  = frontier.get()
             
             if current == goal:
                 break
             
-            for next in self.get_neighbors_4(wrld, current):
-                new_cost = cost_incurred[current] + self.get_Gn(wrld,current,next)
+            for next in self.get_possible_moves(wrld,current,False, True):
+                new_cost = cost_incurred[current] + self.get_Gn(current,next)
                 
                 if next not in cost_incurred or new_cost < cost_incurred[next]:
                     cost_incurred[next]= new_cost
@@ -51,54 +107,66 @@ class TestCharacter(CharacterEntity):
                     
         return came_from, cost_incurred
     
-    def get_neighbors_4(self,wrld, current):
-        neighbors = []
-        right_x = current[0]+1
-        left_x = current[0]-1
-        up_y = current[1]-1
-        down_y = current[1]+1
-        if 0 < right_x <  wrld.width():
-            if not wrld.wall_at(right_x, current[1]):
-                neighbors.append((right_x, current[1]))
-        if  0 < left_x <  wrld.width():
-            if not wrld.wall_at(left_x, current[1]):
-                neighbors.append(( left_x, current[1])) 
-        if 0 < up_y <  wrld.height():
-            if not wrld.wall_at(current[0], up_y):
-                neighbors.append((current[0], up_y))
-        if 0 < down_y < wrld.height():
-            if not wrld.wall_at(current[0], down_y):
-                neighbors.append((current[0], down_y))   
-        return(neighbors)
+    def get_possible_moves(self,wrld, loc, want_moves,isC):
+        neighbors = []   
+
+        for dx in [-1, 0, 1]:
+            # Avoid out-of-bounds access
+            if ((loc[0] + dx >= 0) and (loc[0]  + dx < wrld.width())):
+                for dy in [-1, 0, 1]:
+                    # Avoid out-of-bounds access
+                    if ((loc[1] + dy >= 0) and (loc[1] + dy < wrld.height())):
+                        if isC:
+                            if((wrld.exit_at(loc[0]  + dx, loc[1] + dy) or
+                                wrld.empty_at(loc[0]  + dx, loc[1] + dy)) and
+                                ((loc[0]  + dx, loc[1] + dy)!= (loc[0] ,loc[1]))):
+                                    if want_moves:
+                                        neighbors.append((dx, dy))
+                                    else:
+                                        neighbors.append((loc[0] + dx, loc[1] + dy))
+                            else:
+                                continue
+                        else:
+                            if((not wrld.wall_at(loc[0]  + dx, loc[1] + dy)) and
+                                ((loc[0]  + dx, loc[1] + dy)!= (loc[0] ,loc[1]))):
+                                    if want_moves:
+                                        neighbors.append((dx, dy))
+                                    else:
+                                        neighbors.append((loc[0] + dx, loc[1] + dy))
+
+        return neighbors
     
-    def get_neighbors_8(self,current):
-        neighbors = self.get_neighbors_4
-        right_x = current[0]+1
-        left_x = current[0]-1
-        up_y = current[1]-1
-        down_y = current[1]+1
-        if right_x and up_y > 0:
-            neighbors.append((right_x, up_y))
-        if right_x and down_y > 0:
-            neighbors.append((right_x, down_y)) 
-        if  left_x and up_y > 0:
-            neighbors.append((left_x, up_y)) 
-        if  left_x and down_y > 0:
-            neighbors.append((left_x, down_y))  
-        return(neighbors)
     
     def extract_move(self, next):
         return next[0]-self.x, next[1]-self.y
 
      # the G(n) is the manhattan distance or right angle distance distance
-    def get_Gn(self, wrld, goal, next):
-        return abs(goal[0]-next[0]) + abs(goal[1]-next[1])
+    def get_Gn(self, current, next):
+        return abs(current[0]-next[0]) + abs(current[1]-next[1])
 
     # the h(n) is the euclidean_distance or straight line distance
     def get_Hn(self, goal, next):
         return abs(pow((goal[0]-next[0]), 2) + pow((goal[1]-next[1]), 2))
 
-    def get_path(self, came_from, start, goal):
+    """
+    Checks if a monster is in a given proximity to the character. If the monster
+    is in proximity, return location of the monster. Else, return False
+    """
+    def is_monster_in_proximity(self,wrld):
+        for dx in range(-self.depth,self.depth,1):
+            # Avoid out-of-bounds access
+            if ((self.x + dx >= 0) and (self.x + dx < wrld.width())):
+                for dy in range(-self.depth,self.depth,1):
+                    # Avoid out-of-bounds access
+                    if ((self.y + dy >= 0) and (self.y + dy < wrld.height())):
+                        if wrld.monsters_at(self.x + dx, self.y + dy):
+                            return (True, (self.y + dx, self.y + dy))
+        return (False,(0,0))       
+
+
+    def get_path(self, came_from, wrld):
+        start = (self.x, self.y)
+        goal = wrld.exitcell
         current = goal
         path=[]
         if goal not in came_from:
