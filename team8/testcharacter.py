@@ -18,11 +18,12 @@ class TestCharacter(CharacterEntity):
     """
     depth = 3
     bomb_location = None
-    bomb_timer = 5
+    bomb_timer = 5 
     def do(self, wrld):
         monster_prox = self.is_monster_in_proximity(wrld)
         self.state_selector(monster_prox)
         print(self.state)
+        
         match self.state:
             
             case "move":
@@ -75,6 +76,7 @@ class TestCharacter(CharacterEntity):
                 self.drop_bomb()
                 # self.path.insert(self.move_count,best_move)
                 if(not self.blast_radius(self.bomb_location, best_move)):
+                    print("blast radius failure")
                     self.move(best_move[0],best_move[1])
                 # self.move(start[0],start[1])
                 # self.path.append(best_move)
@@ -88,11 +90,14 @@ class TestCharacter(CharacterEntity):
     def state_selector(self, monster_prox):
         is_near_monster = monster_prox[0][0]
         monster_type = monster_prox[0][1]
+        monster_loc = monster_prox[1]
+        if self.bomb_timer !=5:
+                self.state = "minimax"
+                return 
         if self.called_special_move:
                 self.state = "move"
                 return
         if is_near_monster:
-
             if monster_type == "stupid":
                 self.state = "expectimax"
                 return
@@ -291,8 +296,12 @@ class TestCharacter(CharacterEntity):
                 for dy in range(-self.depth, self.depth + 1, 1):
                     # Avoid out-of-bounds access
                     if ((self.y + dy >= 0) and (self.y + dy < wrld.height())):
+                        
                         monster_info = wrld.monsters_at(self.x + dx, self.y + dy)
                         if monster_info:
+                            if self.get_Gn((self.x,self.y),(self.x + dx, self.y + dy)) <= 2:
+                                print("changed strategy for safety")
+                                return ((True,"aggressive"), (self.x + dx, self.y + dy))
                             return ((True,monster_info[0].name), (self.x + dx, self.y + dy))
         return ((False, "empty"),(0,0))       
 
