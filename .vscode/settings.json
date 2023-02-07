@@ -1,0 +1,6 @@
+{
+    "python.analysis.extraPaths": [
+        "./bomberman"
+    ],
+    "python.analysis.typeCheckingMode": "off"
+}

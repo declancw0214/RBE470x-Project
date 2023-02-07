@@ -16,11 +16,11 @@ class TestCharacter(CharacterEntity):
     depth can be set at 3 to win 100% of the time with variant 2 
     with a depth of 2 it fails once with the seed set at 234
     """
-    depth = 2
+    depth = 3
+    bomb_location = None
+    bomb_timer = 5
     def do(self, wrld):
-        start = (self.x,self.y)
         monster_prox = self.is_monster_in_proximity(wrld)
-
         self.state_selector(monster_prox)
         print(self.state)
         match self.state:
@@ -34,32 +34,56 @@ class TestCharacter(CharacterEntity):
                     self.called_special_move = False
                 else: 
                     print("move")
+                    print('move count', self.move_count)
                     dx, dy = self.extract_move(self.path[self.move_count])
                     self.set_cell_color(self.path[self.move_count][0], self.path[self.move_count][1], Back.RED)
-                    print(dx,dy)
                     self.move(dx, dy)
                     self.move_count+=1
             case "expectimax":
                     
                 best_move = self.run_expectimax(wrld,monster_prox[1])
-                print("best move")
-                print(best_move)
                 self.path.clear()
+                #self.drop_bomb()
                 # self.path.insert(self.move_count,best_move)
                 self.move(best_move[0],best_move[1])
                 # self.move(start[0],start[1])
                 # self.path.append(best_move)
-                self.called_special_move = True
+                #self.called_special_move = True
                 self.move_count = 0
+                self.path_plan = True
 
             case "a_star":
                 self.called_special_move = False
                 came_from, cost_incurred = self.A_star(wrld)
                 self.path = self.get_path(came_from, wrld)
-                self.path_plan = False 
+
+                # bomb explosion was causing no path to goal
+                # if no path rerun a_star next turn
+                if(len(self.path) == 0):
+                    self.path_plan = True
+                else:
+                    dx, dy = self.extract_move(self.path[self.move_count])
+                    self.set_cell_color(self.path[self.move_count][0], self.path[self.move_count][1], Back.RED)
+                    self.move(dx, dy)
+                    self.move_count+=1
+                    self.path_plan = False 
+                
 
             case "minimax":
-                """ should run minimax code"""
+                best_move = self.run_minimax(wrld,monster_prox[1])
+                self.path.clear()
+                self.drop_bomb()
+                # self.path.insert(self.move_count,best_move)
+                if(not self.blast_radius(self.bomb_location, best_move)):
+                    self.move(best_move[0],best_move[1])
+                # self.move(start[0],start[1])
+                # self.path.append(best_move)
+                #self.called_special_move = True
+                self.move_count = 0
+                self.path_plan = True
+
+        self.check_bomb()
+        
 
     def state_selector(self, monster_prox):
         is_near_monster = monster_prox[0][0]
@@ -69,7 +93,7 @@ class TestCharacter(CharacterEntity):
                 return
         if is_near_monster:
 
-            if monster_type== "stupid":
+            if monster_type == "stupid":
                 self.state = "expectimax"
                 return
             else:
@@ -83,18 +107,66 @@ class TestCharacter(CharacterEntity):
             return
 
 
+    def drop_bomb(self):
+        if(not self.bomb_location):
+            self.place_bomb()
+            self.bomb_location = (self.x, self.y)
+
+    def blast_radius(self, bomb_pos, move):
+        if(not bomb_pos):
+            return False
+        for dx in range(-4, 5, 1):
+            radius = (bomb_pos[0] + dx, bomb_pos[1])
+            if ((move[0] == radius[0]) & (move[1] == radius[1])):
+                return True
+        for dy in range(-4, 5, 1):  
+            radius = (bomb_pos[0], bomb_pos[1] + dy)   
+            if ((move[0] == radius[0]) & (move[1] == radius[1])):
+                return True
+        return False
+    
+    def check_bomb(self):
+        if(self.bomb_location):
+            self.bomb_timer -= 1
+        if self.bomb_timer == 0:
+            self.bomb_location = None
+            self.bomb_timer = 5
+        print('bomb_timer', self.bomb_timer)
+
     def run_expectimax(self,wrld,mnstr_loc):
         potential_moves =self.build_tree(wrld,mnstr_loc)
         highest_value = -math.inf
         move_to_take = (0,0)
         for aMove in potential_moves:
-            print(aMove)
             if aMove[1]>highest_value:
                 move_to_take = aMove[0]
                 highest_value = aMove[1]
         dx, dy = self.extract_move(move_to_take)
         return (dx, dy)
+    
+    def run_minimax(self, wrld, mnstr_loc):
 
+        char_potential_moves = self.get_possible_moves(wrld, (self.x, self.y), True)
+        mnstr_potential_moves = self.get_possible_moves(wrld, mnstr_loc, False)
+
+        move_to_take = (0,0)
+        max_value = -math.inf
+
+        for move in char_potential_moves:
+            min_value = math.inf
+
+            for move2 in mnstr_potential_moves:
+                move_value = self.get_Hn(move, move2)
+
+                if move_value < min_value:
+                    min_value = move_value
+            
+            if min_value > max_value:
+                max_value = min_value
+                move_to_take = move
+
+        dx, dy = (move_to_take[0] - self.x, move_to_take[1] - self.y)
+        return dx, dy
 
     def build_tree(self,wrld,mnstr_loc):
         chtr_loc = (self.x,self.y)
@@ -116,16 +188,14 @@ class TestCharacter(CharacterEntity):
 
     def build_T_nodes(self,wrld,mnstr_loc, Cmove, orig_dist_exit):
         
-
         utilities = []
-
     
         new_dist_exit = self.get_Gn(wrld.exitcell,Cmove)
         move_penalty = (orig_dist_exit-new_dist_exit)*.5
         pot_mnstr_moves = self.get_possible_moves(wrld,mnstr_loc,False)
 
         for Mmove in pot_mnstr_moves:
-            M_loc_moved = (mnstr_loc[0]+Mmove[0],mnstr_loc[1]+Mmove[1])
+            #M_loc_moved = (mnstr_loc[0]+Mmove[0],mnstr_loc[1]+Mmove[1])
             reward = self.get_reward(Cmove, Mmove)
             
             utilities.append((reward+move_penalty))
@@ -168,10 +238,9 @@ class TestCharacter(CharacterEntity):
                     # Avoid out-of-bounds access
                     if ((loc[1] + dy >= 0) and (loc[1] + dy < wrld.height())):
                         if isC:
-                            if(wrld.exit_at(loc[0]  + dx, loc[1] + dy) or
-                                wrld.empty_at(loc[0]  + dx, loc[1] + dy)):
-                                   
-                                        neighbors.append((loc[0] + dx, loc[1] + dy))
+                            if((wrld.exit_at(loc[0]  + dx, loc[1] + dy) or wrld.empty_at(loc[0]  + dx, loc[1] + dy))
+                               and (not self.blast_radius(self.bomb_location, (loc[0] + dx, loc[1] + dy)))):
+                                neighbors.append((loc[0] + dx, loc[1] + dy))
                             else:
                                 continue
                         else:
@@ -209,22 +278,21 @@ class TestCharacter(CharacterEntity):
 
     # the h(n) is the euclidean_distance or straight line distance
     def get_Hn(self, goal, next):
-        return abs(pow((goal[0]-next[0]), 2) + pow((goal[1]-next[1]), 2))
+        return math.floor(math.sqrt(pow((goal[0]-next[0]), 2) + pow((goal[1]-next[1]), 2)))
 
     """
     Checks if a monster is in a given proximity to the character. If the monster
     is in proximity, return location of the monster. Else, return False
     """
     def is_monster_in_proximity(self,wrld):
-        for dx in range(-self.depth,self.depth,1):
+        for dx in range(-self.depth, self.depth + 1, 1):
             # Avoid out-of-bounds access
             if ((self.x + dx >= 0) and (self.x + dx < wrld.width())):
-                for dy in range(-self.depth,self.depth,1):
+                for dy in range(-self.depth, self.depth + 1, 1):
                     # Avoid out-of-bounds access
                     if ((self.y + dy >= 0) and (self.y + dy < wrld.height())):
                         monster_info = wrld.monsters_at(self.x + dx, self.y + dy)
                         if monster_info:
-                            
                             return ((True,monster_info[0].name), (self.x + dx, self.y + dy))
         return ((False, "empty"),(0,0))       
 
