@@ -6,6 +6,7 @@ sys.path.insert(0, '../bomberman')
 from entity import CharacterEntity
 from colorama import Fore, Back
 import math
+import pandas as pd
 import csv
 class TestCharacter(CharacterEntity):
     move_count = 0
@@ -20,6 +21,11 @@ class TestCharacter(CharacterEntity):
     bomb_location = None
     bomb_timer = 5 
     def do(self, wrld):
+        self.get_weights()
+        print("weight for feature 1 = ", self.weight_1)
+        print("weight for feature 2 = ", self.weight_2)
+        print("weight for feature 3 = ", self.weight_3)
+        self.update_weights([4,5,6])
         monster_prox = self.is_monster_in_proximity(wrld)
         self.state_selector(monster_prox)
         print(self.state)
@@ -80,7 +86,20 @@ class TestCharacter(CharacterEntity):
                 self.path_plan = True
 
         self.check_bomb()
-        
+
+    def get_weights(self):
+        weights = pd.read_csv('weights.csv')
+        row_index =0
+        self.weight_1 = weights["weight1"][row_index]
+        self.weight_2 = weights["weight2"][row_index]
+        self.weight_3 = weights["weight3"][row_index]
+
+    def update_weights(self, w1):
+        with open("weights.csv", 'a') as csvfile:
+            new_weights = w1
+            updater = csv.writer(csvfile)
+            updater.writerow(new_weights)
+            csvfile.close()
 
     def state_selector(self, monster_prox):
         is_near_monster = monster_prox[0][0]
