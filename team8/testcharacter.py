@@ -8,6 +8,7 @@ from colorama import Fore, Back
 import math
 import pandas as pd
 import csv
+
 class TestCharacter(CharacterEntity):
     move_count = 0
     path_plan = True 
@@ -20,12 +21,21 @@ class TestCharacter(CharacterEntity):
     depth = 3
     bomb_location = None
     bomb_timer = 5 
+    GAMMA=0.9
+    COST_OF_LIVING = -1
+    ALPHA=0.5
+    WEIGHT_INDEX = 0
+    need_weight_index=True
+
     def do(self, wrld):
+        self.get_index()
         self.get_weights()
-        print("weight for feature 1 = ", self.weight_1)
-        print("weight for feature 2 = ", self.weight_2)
-        print("weight for feature 3 = ", self.weight_3)
-        self.update_weights([4,5,6])
+        print("weight for feature 1 = ", self.weights[0])
+        print("weight for feature 2 = ", self.weights[1])
+        print("weight for feature 3 = ", self.weights[2])
+        if self.get_Hn(wrld.exitcell,(self.x,self.y)) <= 1:
+            self.update_weights([4,5,6])
+
         monster_prox = self.is_monster_in_proximity(wrld)
         self.state_selector(monster_prox)
         print(self.state)
@@ -86,13 +96,28 @@ class TestCharacter(CharacterEntity):
                 self.path_plan = True
 
         self.check_bomb()
+        
+    def q_learning(self,q_current,features):
+        max_a = self.get_max_q()
+        delta = (self.COST_OF_LIVING + (self.GAMMA*max_a))-q_current
+        new_weights = []
+        for i in range(len(self.weights)):
+            w_i = self.weights[i]+(self.ALPHA*delta*features[i])
+        self.weights= new_weights
+
+    def get_index(self):
+        if self.need_weight_index:
+            indexes = pd.read_csv('index.csv')
+            self.WEIGHT_INDEX = indexes["index"][0]
+        else:
+            pass
 
     def get_weights(self):
         weights = pd.read_csv('weights.csv')
-        row_index =0
-        self.weight_1 = weights["weight1"][row_index]
-        self.weight_2 = weights["weight2"][row_index]
-        self.weight_3 = weights["weight3"][row_index]
+        weight_1 = weights["weight1"][self.WEIGHT_INDEX]
+        weight_2 = weights["weight2"][self.WEIGHT_INDEX]
+        weight_3 = weights["weight3"][self.WEIGHT_INDEX]
+        self.weights=[weight_1,weight_2,weight_3]
 
     def update_weights(self, w1):
         with open("weights.csv", 'a') as csvfile:
