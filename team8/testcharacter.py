@@ -6,7 +6,8 @@ sys.path.insert(0, '../bomberman')
 from entity import CharacterEntity
 from colorama import Fore, Back
 import math
-
+import pandas as pd
+import csv
 class TestCharacter(CharacterEntity):
     move_count = 0
     path_plan = True 
@@ -20,10 +21,14 @@ class TestCharacter(CharacterEntity):
     bomb_location = None
     bomb_timer = 5 
     def do(self, wrld):
+        self.get_weights()
+        print("weight for feature 1 = ", self.weight_1)
+        print("weight for feature 2 = ", self.weight_2)
+        print("weight for feature 3 = ", self.weight_3)
+        self.update_weights([4,5,6])
         monster_prox = self.is_monster_in_proximity(wrld)
         self.state_selector(monster_prox)
         print(self.state)
-        
         match self.state:
             
             case "move":
@@ -40,16 +45,14 @@ class TestCharacter(CharacterEntity):
                     self.set_cell_color(self.path[self.move_count][0], self.path[self.move_count][1], Back.RED)
                     self.move(dx, dy)
                     self.move_count+=1
+
             case "expectimax":
                     
                 best_move = self.run_expectimax(wrld,monster_prox[1])
                 self.path.clear()
-                #self.drop_bomb()
-                # self.path.insert(self.move_count,best_move)
+                
                 self.move(best_move[0],best_move[1])
-                # self.move(start[0],start[1])
-                # self.path.append(best_move)
-                #self.called_special_move = True
+
                 self.move_count = 0
                 self.path_plan = True
 
@@ -74,23 +77,34 @@ class TestCharacter(CharacterEntity):
                 best_move = self.run_minimax(wrld,monster_prox[1])
                 self.path.clear()
                 self.drop_bomb()
-                # self.path.insert(self.move_count,best_move)
+                
                 if(not self.blast_radius(self.bomb_location, best_move)):
                     print("blast radius failure")
                     self.move(best_move[0],best_move[1])
-                # self.move(start[0],start[1])
-                # self.path.append(best_move)
-                #self.called_special_move = True
+
                 self.move_count = 0
                 self.path_plan = True
 
         self.check_bomb()
-        
+
+    def get_weights(self):
+        weights = pd.read_csv('weights.csv')
+        row_index =0
+        self.weight_1 = weights["weight1"][row_index]
+        self.weight_2 = weights["weight2"][row_index]
+        self.weight_3 = weights["weight3"][row_index]
+
+    def update_weights(self, w1):
+        with open("weights.csv", 'a') as csvfile:
+            new_weights = w1
+            updater = csv.writer(csvfile)
+            updater.writerow(new_weights)
+            csvfile.close()
 
     def state_selector(self, monster_prox):
         is_near_monster = monster_prox[0][0]
         monster_type = monster_prox[0][1]
-        monster_loc = monster_prox[1]
+
         if self.bomb_timer !=5:
                 self.state = "minimax"
                 return 
