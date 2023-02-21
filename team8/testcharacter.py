@@ -96,13 +96,15 @@ class TestCharacter(CharacterEntity):
                 self.path_plan = True
 
         self.check_bomb()
-
-    def update_weights(self,q_current,features):
+    def q_learning(self):
+        best_action = self.get_Q(self.x, self.y)
+        
+    def update_weights(self,q_current):
         max_a = self.get_max_q()
         delta = (self.COST_OF_LIVING + (self.GAMMA*max_a))-q_current
         new_weights = []
         for i in range(len(self.weights)):
-            w_i = self.weights[i]+(self.ALPHA*delta*features[i])
+            w_i = self.weights[i]+(self.ALPHA*delta*self.features[i])
             new_weights.append(w_i)
         self.weights= new_weights
 
