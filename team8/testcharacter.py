@@ -5,6 +5,7 @@ sys.path.insert(0, '../bomberman')
 # Import necessary stuff
 from entity import CharacterEntity
 from sensed_world import SensedWorld
+from sensed_world import SensedWorld
 from colorama import Fore, Back
 import math
 
@@ -322,6 +323,7 @@ class TestCharacter(CharacterEntity):
         goal = wrld.exitcell
         frontier = PriorityQueue()
         frontier.put(start,0)
+        frontier.put(start,0)
         came_from = {}  
         cost_incurred = {}  
         came_from[start] = None
@@ -329,13 +331,21 @@ class TestCharacter(CharacterEntity):
 
         while not frontier.empty():
             current  = frontier.get()
+            current  = frontier.get()
             
             if current == goal:
                 break
             
             for next in self.get_possible_moves(wrld,current,False, True):
                 new_cost = cost_incurred[current] + self.get_Gn(current,next)
+            for next in self.get_possible_moves(wrld,current,False, True):
+                new_cost = cost_incurred[current] + self.get_Gn(current,next)
                 
+                if next not in cost_incurred or new_cost < cost_incurred[next]:
+                    cost_incurred[next]= new_cost
+                    priority = new_cost + self.get_Hn(goal, next)
+                    frontier.put(next, priority)
+                    came_from[next] = current
                 if next not in cost_incurred or new_cost < cost_incurred[next]:
                     cost_incurred[next]= new_cost
                     priority = new_cost + self.get_Hn(goal, next)
@@ -399,11 +409,32 @@ class TestCharacter(CharacterEntity):
      # the G(n) is the manhattan distance or right angle distance distance
     def get_Gn(self, current, next):
         return abs(current[0]-next[0]) + abs(current[1]-next[1])
+    def get_Gn(self, current, next):
+        return abs(current[0]-next[0]) + abs(current[1]-next[1])
 
     # the h(n) is the euclidean_distance or straight line distance
     def get_Hn(self, goal, next):
         return abs(pow((goal[0]-next[0]), 2) + pow((goal[1]-next[1]), 2))
 
+    """
+    Checks if a monster is in a given proximity to the character. If the monster
+    is in proximity, return location of the monster. Else, return False
+    """
+    def is_monster_in_proximity(self,wrld):
+        for dx in range(-self.depth,self.depth,1):
+            # Avoid out-of-bounds access
+            if ((self.x + dx >= 0) and (self.x + dx < wrld.width())):
+                for dy in range(-self.depth,self.depth,1):
+                    # Avoid out-of-bounds access
+                    if ((self.y + dy >= 0) and (self.y + dy < wrld.height())):
+                        if wrld.monsters_at(self.x + dx, self.y + dy):
+                            return (True, (self.x + dx, self.y + dy))
+        return (False,(0,0))       
+
+
+    def get_path(self, came_from, wrld):
+        start = (self.x, self.y)
+        goal = wrld.exitcell
     """
     Checks if a monster is in a given proximity to the character. If the monster
     is in proximity, return location of the monster. Else, return False
@@ -430,6 +461,7 @@ class TestCharacter(CharacterEntity):
         while current != start:
             self.set_cell_color(current[0], current[1],Fore.RED + Back.GREEN)
             path.append(current)
+            current= came_from[current]
             current= came_from[current]
         # path.append(start)
         path.reverse()
