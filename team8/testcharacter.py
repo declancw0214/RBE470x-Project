@@ -34,7 +34,7 @@ class TestCharacter(CharacterEntity):
         print("weight for feature 2 = ", self.weights[1])
         print("weight for feature 3 = ", self.weights[2])
         if self.get_Hn(wrld.exitcell,(self.x,self.y)) <= 1:
-            self.update_weights([4,5,6])
+            self.update_weights_in_csv([4,5,6])
 
         monster_prox = self.is_monster_in_proximity(wrld)
         self.state_selector(monster_prox)
@@ -96,13 +96,14 @@ class TestCharacter(CharacterEntity):
                 self.path_plan = True
 
         self.check_bomb()
-        
-    def q_learning(self,q_current,features):
+
+    def update_weights(self,q_current,features):
         max_a = self.get_max_q()
         delta = (self.COST_OF_LIVING + (self.GAMMA*max_a))-q_current
         new_weights = []
         for i in range(len(self.weights)):
             w_i = self.weights[i]+(self.ALPHA*delta*features[i])
+            new_weights.append(w_i)
         self.weights= new_weights
 
     def get_index(self):
@@ -119,7 +120,7 @@ class TestCharacter(CharacterEntity):
         weight_3 = weights["weight3"][self.WEIGHT_INDEX]
         self.weights=[weight_1,weight_2,weight_3]
 
-    def update_weights(self, w1):
+    def update_weights_in_csv(self, w1):
         with open("weights.csv", 'a') as csvfile:
             new_weights = w1
             updater = csv.writer(csvfile)
