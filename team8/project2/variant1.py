@@ -21,6 +21,6 @@ sys.path.insert(1, '../team8')
 #                             0, 0  # position
 # ))
 """If not monster fill last two places with None"""
-Train_Model.trainer(('map.txt'),(("me","C"),(1,16)),None,None,None,None)
+Train_Model.trainer(('map.txt'),(("me","C"),(10,0)),None,None,None,None)
 # Run!
     

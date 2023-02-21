@@ -1,6 +1,10 @@
 {
     "python.analysis.extraPaths": [
         "./bomberman"
+<<<<<<< HEAD
     ],
     "python.analysis.typeCheckingMode": "off"
+=======
+    ]
+>>>>>>> strickland
 }
