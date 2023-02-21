@@ -14,6 +14,7 @@ from testcharacter import TestCharacter
 from monsters.stupid_monster import StupidMonster
 from monsters.selfpreserving_monster import SelfPreservingMonster
 from project2 import helper
+import csv
 MAX_MEMORY = 100000
 BATCH_SIZE = 1000
 LR = 0.001
@@ -21,7 +22,7 @@ LR = 0.001
 
 
 class trainer:
-
+    WEIGHT_INDEX = 0
     def __init__(self, map, character,monster1,m1_dect,monster2,m2_dect):
         self.n_games = 0
         self.epsilon = 0
@@ -36,6 +37,8 @@ class trainer:
         self.setup()
 
     def setup(self):
+
+
         self.top_score = 5000
         self.score = 0
                 # Create the game
@@ -51,6 +54,7 @@ class trainer:
         if self.monster2 != None:
             self.add_monster(self.monster2,self.m2_dect)
         self.train()
+
     def add_monster(self,monster, dect_r):
         if monster[0][0] == "stupid":
             self.game.add_monster(StupidMonster(monster[0][0], # name
@@ -86,16 +90,24 @@ class trainer:
                 mean_score = total_score/self.n_games
                 plot_mean_scores.append(mean_score)
                 helper.plot(self.n_games,plot_scores,plot_mean_scores)
+                self.update_index()
                 self.setup()
-                
                 
             if self.n_games==2:
                 break
         time.sleep(2)
+
     def get_Score(self):
         print("Getting Score")
         self.score = self.game.world.scores['me']
-        
+
+    def update_index(self):
+        self.WEIGHT_INDEX +=1
+        with open("index.csv", 'w') as csvfile:
+            updater = csv.writer(csvfile)
+            updater.writerow(["index",""])
+            updater.writerow([self.WEIGHT_INDEX, ])
+            csvfile.close()
 
 if __name__ == '__main__':
     trainer.train()
