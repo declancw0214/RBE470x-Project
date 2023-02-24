@@ -15,19 +15,15 @@ from monsters.stupid_monster import StupidMonster
 from monsters.selfpreserving_monster import SelfPreservingMonster
 from project2 import helper
 import csv
-MAX_MEMORY = 100000
-BATCH_SIZE = 1000
-LR = 0.001
+import pandas as pd
 
 
 
 class trainer:
-    WEIGHT_INDEX = 0
+    need_weight_index = True
+    
     def __init__(self, map, character,monster1,m1_dect,monster2,m2_dect):
         self.n_games = 0
-        self.epsilon = 0
-        self.gamma = 0.9
-        self.memory = deque(maxlen=MAX_MEMORY)
         self.map = map
         self.C_info = character
         self.monster1 = monster1
@@ -73,7 +69,7 @@ class trainer:
         total_score = 0
         record = 0
 
-        while True:
+        while self.n_games < 10:
             self.game.go(0)
             print('Game', self.n_games )
            
@@ -92,15 +88,18 @@ class trainer:
                 helper.plot(self.n_games,plot_scores,plot_mean_scores)
                 self.update_index()
                 self.setup()
-                
-            if self.n_games==2:
-                break
+
         time.sleep(2)
 
     def get_Score(self):
         print("Getting Score")
         self.score = self.game.world.scores['me']
 
+    def get_index(self):
+        if self.need_weight_index:
+            indexes = pd.read_csv('index.csv')
+            self.WEIGHT_INDEX = indexes["index"][0]
+            self.need_weight_index=False
     def update_index(self):
         self.WEIGHT_INDEX +=1
         with open("index.csv", 'w') as csvfile:

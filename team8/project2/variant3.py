@@ -27,6 +27,6 @@ g = Game.fromfile('map.txt')
 #                               0, 0  # position
 # ))
 """If not monster fill last two places with none"""
-Train_Model.trainer(('map.txt'),(("me","C"),(1,10)),(("selfpreserving","S"),(3,9)), 1,None,None)
+Train_Model.trainer(('map.txt'),(("me","C"),(0,0)),(("selfpreserving","S"),(3,9)), 1,None,None)
 # Run!
 g.go()
