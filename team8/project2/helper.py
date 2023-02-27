@@ -12,11 +12,11 @@ def plot(n_games,scores, mean_scores,loses, wins):
     plt.title('Training...')
     plt.xlabel('Number of Games')
     plt.ylabel('Score')
-    games = [0,n_games]
-    plt.plot(games, scores, label='scores')
-    plt.plot(games, mean_scores, label='mean scores')
+    
+    plt.plot(n_games, scores, label='scores')
+    plt.plot(n_games, mean_scores, label='mean scores')
 
-    plt.ylim(ymin=0)
+   
     plt.text(len(scores)-1, scores[-1], str(scores[-1]))
     plt.text(len(mean_scores)-1, mean_scores[-1], str(mean_scores[-1]))
     plt.subplot(212)

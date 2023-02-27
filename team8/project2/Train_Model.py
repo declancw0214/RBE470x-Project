@@ -24,8 +24,13 @@ class trainer:
     
     def __init__(self, map, character,monster1,m1_dect,monster2,m2_dect):
         self.n_games = 0
+        self.games = [0]
         self.total_wins = 0
         self.total_losses = 0
+        self.plot_scores = [0]
+        self.plot_mean_scores =[0]
+        self.total_score = 0
+        self.record = 0
         self.map = map
         self.C_info = character
         self.monster1 = monster1
@@ -67,15 +72,12 @@ class trainer:
                                     dect_r                 # detection range
         ))
     def train(self):
-        plot_scores = [0]
-        plot_mean_scores =[0]
-        total_score = 0
-        record = 0
+        
         
         self.get_index()
 
         while self.n_games < 10:
-            self.game.go(0)
+            self.game.go(1)
             print('Game', self.n_games )
            
             self.get_Score()
@@ -87,15 +89,15 @@ class trainer:
                     self.total_losses +=1
                 else:
                     self.total_wins += 1
-                if self.score > record:
-                    record = self.score
-                    print('New High Score', record)
-                
-                plot_scores.append(self.score)
-                total_score+=self.score
-                mean_score = total_score/self.n_games
-                plot_mean_scores.append(mean_score)
-                helper.plot(self.n_games,plot_scores,plot_mean_scores, self.total_losses,self.total_wins)
+                if self.score > self.record:
+                    self.record = self.score
+                    print('New High Score', self.record)
+                self.games.append(self.n_games)
+                self.plot_scores.append(self.score)
+                self.total_score+=self.score
+                mean_score = self.total_score/self.n_games
+                self.plot_mean_scores.append(mean_score)
+                helper.plot(self.games,self.plot_scores,self.plot_mean_scores, self.total_losses,self.total_wins)
                 # self.update_index()
                 self.setup()
 
