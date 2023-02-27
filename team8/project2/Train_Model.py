@@ -24,6 +24,8 @@ class trainer:
     
     def __init__(self, map, character,monster1,m1_dect,monster2,m2_dect):
         self.n_games = 0
+        self.total_wins = 0
+        self.total_losses = 0
         self.map = map
         self.C_info = character
         self.monster1 = monster1
@@ -31,6 +33,7 @@ class trainer:
         self.monster2 = monster2
         self.m2_dect = m2_dect
         self.setup()
+        self.get_index()
 
     def setup(self):
 
@@ -68,28 +71,35 @@ class trainer:
         plot_mean_scores =[0]
         total_score = 0
         record = 0
+        
+        self.get_index()
 
         while self.n_games < 10:
             self.game.go(0)
             print('Game', self.n_games )
            
             self.get_Score()
-
             if self.game.done():
+                
                 print('game Status', self.game.done())
                 self.n_games+=1
+                if self.score < 4500:
+                    self.total_losses +=1
+                else:
+                    self.total_wins += 1
                 if self.score > record:
                     record = self.score
                     print('New High Score', record)
+                
                 plot_scores.append(self.score)
                 total_score+=self.score
                 mean_score = total_score/self.n_games
                 plot_mean_scores.append(mean_score)
-                helper.plot(self.n_games,plot_scores,plot_mean_scores)
-                self.update_index()
+                helper.plot(self.n_games,plot_scores,plot_mean_scores, self.total_losses,self.total_wins)
+                # self.update_index()
                 self.setup()
 
-        time.sleep(2)
+        print("total Games: ", self.n_games, "Wins: ", self.total_wins," Loses: ", self.total_losses)
 
     def get_Score(self):
         print("Getting Score")
@@ -100,6 +110,7 @@ class trainer:
             indexes = pd.read_csv('index.csv')
             self.WEIGHT_INDEX = indexes["index"][0]
             self.need_weight_index=False
+
     def update_index(self):
         self.WEIGHT_INDEX +=1
         with open("index.csv", 'w') as csvfile:
@@ -107,6 +118,7 @@ class trainer:
             updater.writerow(["index",""])
             updater.writerow([self.WEIGHT_INDEX, ])
             csvfile.close()
+        self.need_weight_index=True
 
 if __name__ == '__main__':
     trainer.train()
