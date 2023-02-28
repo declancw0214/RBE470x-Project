@@ -15,14 +15,13 @@ Helper classes
                         ((name,avatar)(x position, y position))
                         if a monster isn't used monster info and dection range is set to None
     Test Character Festures
-        -a star distance to exit
-        -a star distance to closest monster
-        -should a bomb be dropped
+        - a star distance to exit
+        - a star distance to closest monster
+        - should a bomb be dropped
         - distance to explosion
-        - distance to right wall
-        - distance to bottom wall
-        - distance to left wall
-        - distance to top wall
+        - manhattan distance to exit
+        - difference between the distance to closest wall on the left and the closest wall on the right
+        - difference between the distance to closest wall on the bottom and the closest wall on the top
         - cosine similarity of the path to monster and path to exit
 
         - wall directions are labeled clockwise
@@ -40,3 +39,5 @@ Packages we added
     -ipython
     -time
     -csv
+    -numpy
+    -numpy.linalg

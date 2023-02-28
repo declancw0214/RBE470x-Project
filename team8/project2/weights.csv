@@ -1,5 +1,2 @@
-"dist_exit","dist_monst","drop_bomb","dist_bomb","dist_r_wall","dist_b_wall","dist_l_wall","dist_t_wall","cos_sim"
-100,50,1,50,1,1,1,1,50
-29.398424622519908,13.140806494392303,1.0,15.0,1.0,1.0,1.0,1.0,15.0
-28.80701965143449,11.310220392685741,1.0,15.0,1.0,1.0,1.0,1.0,15.0
-28.225628334598674,9.507802934206547,1.0,15.0,1.0,1.0,1.0,1.0,15.0
+"dist_exit","dist_monst","drop_bomb","dist_bomb","manhat_exit","diff_l_r_walls","diff_b_u_walls","cos_sim"
+30,15,1,50,30,1,1,15
