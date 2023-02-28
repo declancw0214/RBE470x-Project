@@ -294,15 +294,11 @@ class TestCharacter(CharacterEntity):
     def is_behind_wall(self, wrld, check_loc):
         
         if self.y < 2 < check_loc[1] < 7:
-        if self.y < 2 < check_loc[1] < 7:
             return self.check_wall(wrld,3)
-        elif self.y < 6< check_loc[1] < 11:
         elif self.y < 6< check_loc[1] < 11:
             return self.check_wall(wrld,7)
         elif self.y < 10 < check_loc[1] < 15:
-        elif self.y < 10 < check_loc[1] < 15:
             return self.check_wall(wrld,11)
-        elif self.y < 14< check_loc[1] < 19:
         elif self.y < 14< check_loc[1] < 19:
             return self.check_wall(wrld,15)
         else: 
@@ -457,7 +453,6 @@ class TestCharacter(CharacterEntity):
     #     return utilities
 
     def A_star(self,wrld, start, goal,toM):
-    def A_star(self,wrld, start, goal,toM):
       
         frontier = PriorityQueue()
         frontier.put(start,0)
@@ -475,7 +470,6 @@ class TestCharacter(CharacterEntity):
                 break
             
             for next in self.get_possible_moves(wrld,current, True,toM):
-            for next in self.get_possible_moves(wrld,current, True,toM):
                 new_cost = cost_incurred[current] + self.get_Gn(current,next)
                 
                 if next not in cost_incurred or new_cost < cost_incurred[next]:
@@ -486,7 +480,6 @@ class TestCharacter(CharacterEntity):
                     
         return came_from, cost_incurred
     
-    def get_possible_moves(self,wrld, loc, isC,toM):
     def get_possible_moves(self,wrld, loc, isC,toM):
         neighbors = []   
 
