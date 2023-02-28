@@ -76,7 +76,7 @@ class trainer:
         
         self.get_index()
 
-        while self.n_games < 50:
+        while self.n_games < 10:
             self.game.go(0)
             print('Game', self.n_games )
            
