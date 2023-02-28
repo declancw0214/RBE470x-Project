@@ -1,2 +1,2 @@
-"weight1","weight2","weight3","weight4","weight5"
-12,7.5,5,10,20
+"dist_exit","dist_monst","drop_bomb","dist_bomb","dist_r_wall","dist_b_wall","dist_l_wall","dist_t_wall","cos_sim"
+20,20,1,15,1,1,1,1,15

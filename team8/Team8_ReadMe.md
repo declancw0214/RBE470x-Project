@@ -14,6 +14,26 @@ Helper classes
                 character and monster info is structured as a tuple of tuple:
                         ((name,avatar)(x position, y position))
                         if a monster isn't used monster info and dection range is set to None
+    Test Character Festures
+        -a star distance to exit
+        -a star distance to closest monster
+        -should a bomb be dropped
+        - distance to explosion
+        - distance to right wall
+        - distance to bottom wall
+        - distance to left wall
+        - distance to top wall
+        - cosine similarity of the path to monster and path to exit
+
+        - wall directions are labeled clockwise
+            |-------|
+            |   4   |
+            |   |   |
+            | 3-C-1 |
+            |   |   |
+            |   2   |
+            |-------|
+
 Packages we added
     -pandas
     -matlibplot
