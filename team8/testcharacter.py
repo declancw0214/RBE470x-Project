@@ -8,6 +8,8 @@ from colorama import Fore, Back
 import math
 import pandas as pd
 import csv
+import numpy as np
+from numpy.linalg import norm
 class TestCharacter(CharacterEntity):
     move_count = 0
     path_plan = True 
@@ -70,12 +72,12 @@ class TestCharacter(CharacterEntity):
         self.features = self.get_features(wrld, (self.x, self.y))
 
     def get_features(self, wrld, position):
-        # monst_path = self.get_nearest_monst_path(wrld,position)
+        monst_path = self.get_nearest_monst_path(wrld,position)
         exit_path = self.get_exit_path(wrld,position) 
         #  f1 = a_star distance to exit
         f1 = 1/(1+len(exit_path))
         #  f2 = a_star distance to closest monster
-        f2 = 0 #len(monst_path)
+        f2 = 1/(1+len(monst_path))
         # f3 = should we drop bomb  
         f3 = self.should_drop_bomb(wrld, position)
         # f4 = distance to bomb
@@ -89,14 +91,17 @@ class TestCharacter(CharacterEntity):
         # f8 = manhattan distance to closet wall on top
         f8 = 1/(1+self.get_wall_distance(wrld, position,4))
         # f8 = cosine similarity from path to monster and path to exit
-        f9 = 0 #self.get_cos_sim(wrld,monst_path,exit_path)
+        if monst_path == [] or exit_path == []:
+            f9=0
+        else:
+            f9 = self.get_cos_sim(wrld,monst_path,exit_path)
         return [f1, f2, f3, f4, f5, f6, f7, f8, f9]
     
         
     def best_Q(self, wrld):
         best_q = -math.inf
         best_move = (self.x, self.y)
-        neighbors = self.get_possible_moves(wrld, (self.x, self.y), True)
+        neighbors = self.get_possible_moves(wrld, (self.x, self.y), True, False)
         # use 0,0 move to represent placing bomb
         neighbors.append((self.x, self.y))
 
@@ -138,7 +143,7 @@ class TestCharacter(CharacterEntity):
         dx, dy = self.extract_move(position)
         goal = self.find_next_best(wrld,(self.x,self.y))
         if goal==(self.x,self.y) and dx == 0 and dy ==0 and not(self.bomb_location):
-            return 0.25
+            return 0.5
         else: 
             return 0
         # if(self.get_bomb_distance((self.x, self.y)) != 0):
@@ -153,10 +158,11 @@ class TestCharacter(CharacterEntity):
             return []
         else:
             print("goal", goal)
-            came_from, cost_incurred = self.A_star(wrld,position,goal)
+            came_from, cost_incurred = self.A_star(wrld,position,goal,False)
             path = self.get_path(position,came_from, goal)
 
             return path
+
         
 
     def find_next_best(self, wrld,position):
@@ -185,7 +191,9 @@ class TestCharacter(CharacterEntity):
             
     def get_nearest_monst_path(self,wrld,position):
         monsters = self.get_monster_position(wrld)
+        print("monsters = ", monsters)
         if monsters != []:
+
             if len(monsters) ==1:
                 closest_monster = monsters[0]
             else:
@@ -195,8 +203,9 @@ class TestCharacter(CharacterEntity):
                     closest_monster = monsters[0]
                 else:
                     closest_monster = monsters[1]
-            came_from, cost_incurred = self.A_star(wrld,position,closest_monster)
+            came_from, cost_incurred = self.A_star(wrld,position,closest_monster,True)
             path = self.get_path(position,came_from, closest_monster)
+            print(path)
             return path
         else:
             return []
@@ -252,8 +261,20 @@ class TestCharacter(CharacterEntity):
                 # return 1.0 / (self.get_Gn(self.bomb_location,position) + 1)
             else:
                 return 0
-    
-    
+    def get_cos_sim(self,wrld,monst_path,exit_path):
+        
+        mdx,mdy = self.extract_move(monst_path[0])
+        edx,edy = self.extract_move(exit_path[0])    
+        if (mdx,mdy)==(0,0) or (edx,edy)==(0,0):
+            return 0
+        v_m= np.array([mdx,mdy])
+        v_e=np.array([edx,edy])
+        print("v_m = ", v_m)
+        print("v_e = ", v_e)
+        cosine =np.dot(v_m,v_e)/(norm(v_m)*norm(v_e)),4
+
+        print("Cosine Similarity:", cosine)
+        return cosine
     
     def get_monster_position(self, wrld):
         monsters = []
@@ -269,13 +290,13 @@ class TestCharacter(CharacterEntity):
     """
     def is_behind_wall(self, wrld, check_loc):
         
-        if 2 < check_loc[1] < 7:
+        if self.y < 2 < check_loc[1] < 7:
             return self.check_wall(wrld,3)
-        elif 6< check_loc[1] < 11:
+        elif self.y < 6< check_loc[1] < 11:
             return self.check_wall(wrld,7)
-        elif 10 < check_loc[1] < 15:
+        elif self.y < 10 < check_loc[1] < 15:
             return self.check_wall(wrld,11)
-        elif 14< check_loc[1] < 19:
+        elif self.y < 14< check_loc[1] < 19:
             return self.check_wall(wrld,15)
         else: 
             return False
@@ -426,7 +447,7 @@ class TestCharacter(CharacterEntity):
     #         utilities.append((reward+move_penalty))
     #     return utilities
 
-    def A_star(self,wrld, start, goal):
+    def A_star(self,wrld, start, goal,toM):
       
         frontier = PriorityQueue()
         frontier.put(start,0)
@@ -443,7 +464,7 @@ class TestCharacter(CharacterEntity):
             if current == goal:
                 break
             
-            for next in self.get_possible_moves(wrld,current, True):
+            for next in self.get_possible_moves(wrld,current, True,toM):
                 new_cost = cost_incurred[current] + self.get_Gn(current,next)
                 
                 if next not in cost_incurred or new_cost < cost_incurred[next]:
@@ -454,7 +475,7 @@ class TestCharacter(CharacterEntity):
                     
         return came_from, cost_incurred
     
-    def get_possible_moves(self,wrld, loc, isC):
+    def get_possible_moves(self,wrld, loc, isC,toM):
         neighbors = []   
 
         for dx in [-1, 0, 1]:
@@ -465,13 +486,22 @@ class TestCharacter(CharacterEntity):
                     if ((loc[1] + dy >= 0) and (loc[1] + dy < wrld.height())):
                         
                         if isC:
-                            if((wrld.exit_at(loc[0]  + dx, loc[1] + dy) or wrld.empty_at(loc[0]  + dx, loc[1] + dy))
-                               and (not self.blast_radius(self.bomb_location, (loc[0] + dx, loc[1] + dy)))):
-                                if((loc[0]  + dx, loc[1] + dy)) == (0,15):
-                                    self.set_cell_color((loc[0] + dx), (loc[1] + dy),Fore.RED + Back.GREEN)
-                                neighbors.append((loc[0] + dx, loc[1] + dy))
+                            if toM:
+                                if((wrld.exit_at(loc[0]  + dx, loc[1] + dy) or not(wrld.wall_at(loc[0]  + dx, loc[1] + dy)))
+                                and (not self.blast_radius(self.bomb_location, (loc[0] + dx, loc[1] + dy)))):
+                                    if((loc[0]  + dx, loc[1] + dy)) == (0,15):
+                                        self.set_cell_color((loc[0] + dx), (loc[1] + dy),Fore.RED + Back.GREEN)
+                                    neighbors.append((loc[0] + dx, loc[1] + dy))
+                                else:
+                                    continue
                             else:
-                                continue
+                                if((wrld.exit_at(loc[0]  + dx, loc[1] + dy) or wrld.empty_at(loc[0]  + dx, loc[1] + dy))
+                                and (not self.blast_radius(self.bomb_location, (loc[0] + dx, loc[1] + dy)))):
+                                    if((loc[0]  + dx, loc[1] + dy)) == (0,15):
+                                        self.set_cell_color((loc[0] + dx), (loc[1] + dy),Fore.RED + Back.GREEN)
+                                    neighbors.append((loc[0] + dx, loc[1] + dy))
+                                else:
+                                    continue
                         else:
                             if((not wrld.wall_at(loc[0]  + dx, loc[1] + dy)) and
                                 ((loc[0]  + dx, loc[1] + dy)!= (loc[0] ,loc[1]))):
@@ -531,9 +561,7 @@ class TestCharacter(CharacterEntity):
 
 
     def get_path(self,start, came_from, goal):
-       
         current = goal
-        # print(goal)
         path=[]
         if goal not in came_from:
             return []
@@ -541,6 +569,5 @@ class TestCharacter(CharacterEntity):
             self.set_cell_color(current[0], current[1],Fore.RED + Back.GREEN)
             path.append(current)
             current= came_from[current]
-        # path.append(start)
         path.reverse()
         return path
