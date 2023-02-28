@@ -26,6 +26,6 @@ random.seed(123) # TODO Change this if you want different random choices
 #                               0, 0  # position
 # ))
 """If not monster fill last two places with none"""
-Train_Model.trainer(('map.txt'),(("me","C"),(0,0)),(("stupid","S"),(3,9)), None,None,None)
+Train_Model.trainer(('map.txt'),(("me","C"),(7,9)),(("stupid","S"),(3,9)), None,None,None)
 # Run!
 # g.go()
