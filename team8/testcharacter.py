@@ -10,6 +10,8 @@ import pandas as pd
 import csv
 import numpy as np
 from numpy.linalg import norm
+import numpy as np
+from numpy.linalg import norm
 class TestCharacter(CharacterEntity):
     move_count = 0
     path_plan = True 
@@ -79,6 +81,7 @@ class TestCharacter(CharacterEntity):
         f1 = 1/(1+len(exit_path))
         #  f2 = a_star distance to closest monster
         f2 = 1/(1+len(monst_path))
+        f2 = 1/(1+len(monst_path))
         # f3 = should we drop bomb  
         f3 = self.should_drop_bomb(wrld, position)
         # f4 = distance to bomb
@@ -102,6 +105,7 @@ class TestCharacter(CharacterEntity):
     def best_Q(self, wrld):
         best_q = -math.inf
         best_move = (self.x, self.y)
+        neighbors = self.get_possible_moves(wrld, (self.x, self.y), True, False)
         neighbors = self.get_possible_moves(wrld, (self.x, self.y), True, False)
         # use 0,0 move to represent placing bomb
         neighbors.append((self.x, self.y))
@@ -192,7 +196,9 @@ class TestCharacter(CharacterEntity):
     def get_nearest_monst_path(self,wrld,position):
         monsters = self.get_monster_position(wrld)
         print("monsters = ", monsters)
+        print("monsters = ", monsters)
         if monsters != []:
+
 
             if len(monsters) ==1:
                 closest_monster = monsters[0]
@@ -204,7 +210,9 @@ class TestCharacter(CharacterEntity):
                 else:
                     closest_monster = monsters[1]
             came_from, cost_incurred = self.A_star(wrld,position,closest_monster,True)
+            came_from, cost_incurred = self.A_star(wrld,position,closest_monster,True)
             path = self.get_path(position,came_from, closest_monster)
+            print(path)
             print(path)
             return path
         else:
@@ -286,11 +294,15 @@ class TestCharacter(CharacterEntity):
     def is_behind_wall(self, wrld, check_loc):
         
         if self.y < 2 < check_loc[1] < 7:
+        if self.y < 2 < check_loc[1] < 7:
             return self.check_wall(wrld,3)
+        elif self.y < 6< check_loc[1] < 11:
         elif self.y < 6< check_loc[1] < 11:
             return self.check_wall(wrld,7)
         elif self.y < 10 < check_loc[1] < 15:
+        elif self.y < 10 < check_loc[1] < 15:
             return self.check_wall(wrld,11)
+        elif self.y < 14< check_loc[1] < 19:
         elif self.y < 14< check_loc[1] < 19:
             return self.check_wall(wrld,15)
         else: 
@@ -445,6 +457,7 @@ class TestCharacter(CharacterEntity):
     #     return utilities
 
     def A_star(self,wrld, start, goal,toM):
+    def A_star(self,wrld, start, goal,toM):
       
         frontier = PriorityQueue()
         frontier.put(start,0)
@@ -462,6 +475,7 @@ class TestCharacter(CharacterEntity):
                 break
             
             for next in self.get_possible_moves(wrld,current, True,toM):
+            for next in self.get_possible_moves(wrld,current, True,toM):
                 new_cost = cost_incurred[current] + self.get_Gn(current,next)
                 
                 if next not in cost_incurred or new_cost < cost_incurred[next]:
@@ -473,6 +487,7 @@ class TestCharacter(CharacterEntity):
         return came_from, cost_incurred
     
     def get_possible_moves(self,wrld, loc, isC,toM):
+    def get_possible_moves(self,wrld, loc, isC,toM):
         neighbors = []   
 
         for dx in [-1, 0, 1]:
@@ -483,6 +498,22 @@ class TestCharacter(CharacterEntity):
                     if ((loc[1] + dy >= 0) and (loc[1] + dy < wrld.height())):
                         
                         if isC:
+                            if toM:
+                                if((wrld.exit_at(loc[0]  + dx, loc[1] + dy) or not(wrld.wall_at(loc[0]  + dx, loc[1] + dy)))
+                                and (not self.blast_radius(self.bomb_location, (loc[0] + dx, loc[1] + dy)))):
+                                    if((loc[0]  + dx, loc[1] + dy)) == (0,15):
+                                        self.set_cell_color((loc[0] + dx), (loc[1] + dy),Fore.RED + Back.GREEN)
+                                    neighbors.append((loc[0] + dx, loc[1] + dy))
+                                else:
+                                    continue
+                            else:
+                                if((wrld.exit_at(loc[0]  + dx, loc[1] + dy) or wrld.empty_at(loc[0]  + dx, loc[1] + dy))
+                                and (not self.blast_radius(self.bomb_location, (loc[0] + dx, loc[1] + dy)))):
+                                    if((loc[0]  + dx, loc[1] + dy)) == (0,15):
+                                        self.set_cell_color((loc[0] + dx), (loc[1] + dy),Fore.RED + Back.GREEN)
+                                    neighbors.append((loc[0] + dx, loc[1] + dy))
+                                else:
+                                    continue
                             if toM:
                                 if((wrld.exit_at(loc[0]  + dx, loc[1] + dy) or not(wrld.wall_at(loc[0]  + dx, loc[1] + dy)))
                                 and (not self.blast_radius(self.bomb_location, (loc[0] + dx, loc[1] + dy)))):
