@@ -15,13 +15,13 @@ class TestCharacter(CharacterEntity):
     path = []
     depth = 3
     bomb_location = None
-    bomb_timer = 5 
-    GAMMA=0.9
+    bomb_timer = 3
+    GAMMA = 0.8
     COST_OF_LIVING = -1
-    ALPHA=0.01
+    ALPHA = 0.01
     WEIGHT_INDEX = 0
-    need_weight_index=True
-
+    need_weight_index = True
+    goal = None
     def do(self, wrld):
         self.set_features(wrld)
         print('features', self.features)
@@ -41,14 +41,19 @@ class TestCharacter(CharacterEntity):
         print('move', move, 'q value', q)
         print('post weights', self.weights)
 
-        if self.get_Hn(wrld.exitcell,(self.x,self.y)) <= 1:
-            self.update_weights_in_csv(self.weights)
+        # if self.get_Gn(wrld.exitcell,(self.x,self.y)) <= 2:
+        self.update_weights_in_csv(self.weights)
 
-        if((move[0] == 0) & (move[1] == 0)):
+        if((self.x == self.goal[0]) & (self.y == self.goal[1])):
+            
             self.drop_bomb()
+            self.move(move[0], move[1])
         else:
             self.move(move[0], move[1])
+
+        print('self.goal', self.goal)
         
+
 
 #        monster_prox = self.is_monster_in_proximity(wrld)
 #        self.state_selector(monster_prox)
@@ -115,28 +120,55 @@ class TestCharacter(CharacterEntity):
         self.features = self.get_features(wrld, (self.x, self.y))
 
     def get_features(self, wrld, position):
-        # f1 = distance to monster
-        f1 = self.get_monster_distance(wrld)
-        # f2 = distance to exit
-        f2 = - self.get_exit_distance(wrld, position)
-        # f3 = distance to bomb
-        f3 = self.get_bomb_distance(position)
-        # f4 = should we place bomb
-        f4 = self.get_bomb_odds(wrld, position)
-
-        return [f1, f2, f3, f4]
+        monst_path = self.get_nearest_monst_path(wrld,position)
+        exit_path,distance = self.get_exit_path(wrld,position)
+        #print('exit path:', exit_path) 
+        #  f1 = a_star distance to exit
+        f1 = 1/(1+distance)
+        #  f2 = a_star distance to closest monster
+        f2 = len(monst_path)
+        # f3 = should we drop bomb  
+        f3 = 0
+        #self.should_drop_bomb(wrld, position,distance)
+        # f4 = distance to bomb
+        f4 = self.get_bomb_distance(position)
+        # f5 = manhattan distance to exit
+        f5 = 1/(1+ self.get_Gn(position,wrld.exitcell))
+        dist_r = self.get_wall_distance(wrld, position,1)
+        dist_l = self.get_wall_distance(wrld, position,3)
+        diff_l_r=abs(dist_r-dist_l)
+        # f6 = difference between the closest wall on the left and the closest wall on the right
+        f6 = 1/(1+diff_l_r)
+        # f7 = difference between the closest wall on the left and the closest wall on the right
+        dist_b = self.get_wall_distance(wrld, position,2)
+        dist_u = self.get_wall_distance(wrld, position,4)
+        diff_b_u=abs(dist_b-dist_u)
+        
+        # f8 = manhattan distance to closet wall on top
+        f7 = 1/(1+diff_b_u)#self.get_wall_distance(wrld, position,4)
+        # f8 = cosine similarity from path to monster and path to exit
+        if monst_path == [] or exit_path == []:
+            f8=-1
+        else:
+            f8 = self.get_cos_sim(wrld,monst_path,exit_path)
+        return [f1, f2, f3, f4, f5, f6, f7, f8]
     
     def best_Q(self, wrld):
         best_q = -math.inf
-        best_move = (0, 0)
-        neighbors = self.get_possible_moves(wrld, (self.x, self.y), True)
+        best_move = (self.x, self.y)
+        neighbors = self.get_possible_moves(wrld, (self.x, self.y), True, False)
+        #print("neighbors ", neighbors)
         # use 0,0 move to represent placing bomb
         neighbors.append((self.x, self.y))
 
         for move in neighbors:
+            #print("getting features")
+            #print('check', move)
             features = self.get_features(wrld, move)
+            print('FEATURES', features)
             q = self.calc_Q(features)
-            print('check', move, q)
+            
+            print('---CHECK', move, q)
 
             if(q > best_q):
                 best_q = q
@@ -144,16 +176,74 @@ class TestCharacter(CharacterEntity):
 
         return best_q, best_move
 
-
+    def get_q_reward(self,wrld, best_move):
+        if best_move ==(7,18):
+            return 10
+        elif self.blast_radius(self.bomb_location,best_move):
+            return -10
+        elif wrld.monsters_at(best_move[0],best_move[1]):
+            return -10
+        else:
+            exit_reward = (self.get_Gn(best_move,wrld.exitcell))
+            return self.COST_OF_LIVING #- exit_reward
+    
     def calc_Q(self, features):
         return (self.weights[0] * features[0]) + (self.weights[1] * features[1]) + (self.weights[2] * features[2]) + (self.weights[3] * features[3])
     
-    def get_bomb_odds(self, wrld, position):
-        if(self.get_bomb_distance((self.x, self.y)) != 0):
+    def should_drop_bomb(self, wrld, position,distance):
+        dx, dy = self.extract_move(position)
+
+        #print("dx,dy", (dx,dy))
+        #print(dx ==0 and dy==0 and not(self.bomb_location) and distance ==0)
+        if dx ==0 and dy==0 and not(self.bomb_location):
+            return 1
+        else: 
             return 0
+
+    def get_exit_path(self,wrld,position): 
+        goals = [wrld.exitcell,(7,14), (7,10),(7,6),(7,2)]
+        for i in range(len(goals)):
+            #print("trying ", goals[i])
+            if goals[i]==(self.x,self.y):
+                return [],0
+            came_from, cost_incurred = self.A_star(wrld,(self.x,self.y),goals[i],False)
+    
+            path = self.get_path((self.x,self.y),came_from, goals[i])
+            if path != []:
+                #print("GOAL = ", goals[i])
+                self.goal = goals[i]
+                distance = self.get_Gn(position,path[0])
+                return path,distance
         else:
-            #print(float(self.get_exit_distance(wrld, (self.x, self.y)))**3)
-            return  (2* float(self.get_exit_distance(wrld, position))) / (float(self.get_monster_distance(wrld)) + 1)
+            print("NO GOAL FOUND")
+            return [], 0
+            
+    def get_nearest_monst_path(self,wrld,position):
+        monsters = self.get_monster_position(wrld)
+        # print("monsters = ", monsters)
+
+        if monsters != []:
+
+
+            if len(monsters) ==1:
+                came_from, cost_incurred = self.A_star(wrld,position,monsters[0],True)
+                path = self.get_path(position,came_from, monsters[0])
+                return path
+            else:
+                came_from, cost_incurred = self.A_star(wrld,position,monsters[0],True)
+                path1 = self.get_path(position,came_from, monsters[0])
+                monst1_dist = len(path1)
+                came_from, cost_incurred = self.A_star(wrld,position,monsters[1],True)
+                path2 = self.get_path(position,came_from, monsters[1])
+                monst2_dist = len(path2)
+                monst1_man_dist = self.get_Gn(position,monsters[0])
+                monst2_man_dist = self.get_Gn(position,monsters[1])
+                if monst1_dist < monst2_dist:
+                    return path1
+                elif monst1_man_dist < monst2_man_dist:
+                    return path1
+                else:
+                    return path2
     
     def get_exit_distance(self, wrld, position):
         return self.get_Hn(position, wrld.exitcell)
@@ -182,15 +272,19 @@ class TestCharacter(CharacterEntity):
         #best_action = self.get_Q(self.x, self.y)
         
     def update_weights(self, wrld, q_current):
-        max_a, move = self.best_Q(wrld)
-        delta = (self.COST_OF_LIVING + (self.GAMMA*max_a)) - q_current
+        max_q, best_move= self.best_Q(wrld)
+        reward = self.get_q_reward(wrld,best_move)
+        print('reward:', reward)
+        print(max_q, q_current)
+        delta = (reward + (self.GAMMA*max_q)) - q_current
+        print('delta:', delta)
         new_weights = []
         for i in range(len(self.weights)):
             w_i = self.weights[i]+(self.ALPHA*delta*self.features[i])
             new_weights.append(w_i)
         self.weights = new_weights
-        direction = (())
-        return ((move[0] - self.x), (move[1] - self.y)), max_a
+        #print('weights', self.weights)
+        return ((best_move[0] - self.x), (best_move[1] - self.y)), max_q
 
     def get_index(self):
         if self.need_weight_index:
@@ -201,13 +295,18 @@ class TestCharacter(CharacterEntity):
 
     def get_weights(self):
         weights = pd.read_csv('weights.csv')
+
         self.WEIGHT_INDEX = len(weights) - 1
-        print(self.WEIGHT_INDEX)
-        weight_1 = weights["weight1"][self.WEIGHT_INDEX]
-        weight_2 = weights["weight2"][self.WEIGHT_INDEX]
-        weight_3 = weights["weight3"][self.WEIGHT_INDEX]
-        weight_4 = weights["weight4"][self.WEIGHT_INDEX]
-        self.weights=[weight_1,weight_2,weight_3,weight_4]
+  
+        w_1 = weights["dist_exit"][self.WEIGHT_INDEX]
+        w_2 = weights["dist_monst"][self.WEIGHT_INDEX]
+        w_3 = weights["drop_bomb"][self.WEIGHT_INDEX]
+        w_4 = weights["dist_bomb"][self.WEIGHT_INDEX]
+        w_5 = weights["manhat_exit"][self.WEIGHT_INDEX]
+        w_6 = weights["diff_l_r_walls"][self.WEIGHT_INDEX]
+        w_7 = weights["diff_b_u_walls"][self.WEIGHT_INDEX]
+        w_8 = weights["cos_sim"][self.WEIGHT_INDEX]
+        self.weights = [w_1,w_2,w_3,w_4,w_5,w_6,w_7,w_8]
 
     def update_weights_in_csv(self, w1):
         with open("weights.csv", 'a') as csvfile:
@@ -242,7 +341,7 @@ class TestCharacter(CharacterEntity):
 
 
     def drop_bomb(self):
-        if(not self.bomb_location):
+        if(not self.bomb_location) and self.bomb_timer==3:
             self.place_bomb()
             self.bomb_location = (self.x, self.y)
 
@@ -264,49 +363,7 @@ class TestCharacter(CharacterEntity):
             self.bomb_timer -= 1
         if self.bomb_timer == 0:
             self.bomb_location = None
-            self.bomb_timer = 5
-        print('bomb_timer', self.bomb_timer)
-
-    def run_expectimax(self,wrld,mnstr_loc):
-
-        potential_moves = self.build_tree(wrld,mnstr_loc, False)
-        highest_value = -math.inf
-        move_to_take = (0,0)
-        for aMove in potential_moves:
-            if aMove[1]>highest_value:
-                highest_value = aMove[1]
-                move_to_take = aMove[0]
-        return move_to_take
-
-    def build_tree(self,wrld,mnstr_loc, isMiniMax):
-        chtr_loc = (self.x,self.y)
-        #chance_node list of tuples (action, expected value)
-        chance_node: list [tuple(tuple, float)] = []
-
-        pot_chtr_moves = self.get_possible_moves(wrld,chtr_loc,False,True)
-
-        for Cmove in pot_chtr_moves:
-            if(not self.blast_radius(self.bomb_position, Cmove)):
-                utilities = self.build_T_nodes(wrld,mnstr_loc, Cmove)
-
-                #print(utilities)
-                probability = ((1)/len(utilities))
-                expectedValue= 0
-                if(isMiniMax):
-                    chance_node.append((Cmove, min(utilities)))
-                else:
-                    for aReward in utilities:
-                        expectedValue += (aReward*probability)
-                    chance_node.append((Cmove,expectedValue))
-        return chance_node
-
-    def build_T_nodes(self,wrld,mnstr_loc, Cmove):
-        chtr_loc = (self.x,self.y)
-        #C_loc_moved = (chtr_loc[0] + Cmove[0], chtr_loc[1]+Cmove[1])
-        C_loc_moved = Cmove
-
-        utilities = []
-        start_distance =self.get_Hn(chtr_loc, mnstr_loc)
+            self.bomb_timer = 3
 
         pot_mnstr_moves = self.get_possible_moves(wrld,mnstr_loc,True,False)
         for Mmove in pot_mnstr_moves:
