@@ -73,7 +73,7 @@ class TestCharacter(CharacterEntity):
     def get_features(self, wrld, position):
         monst_path = self.get_nearest_monst_path(wrld,position)
         exit_path,distance = self.get_exit_path(wrld,position)
-        print('exit path:', exit_path) 
+        # print('exit path:', exit_path) 
         #  f1 = a_star distance to exit
         f1 = 1/(1+distance)
         #  f2 = a_star distance to closest monster
@@ -108,15 +108,15 @@ class TestCharacter(CharacterEntity):
         best_q = -math.inf
         best_move = (self.x, self.y)
         neighbors = self.get_possible_moves(wrld, (self.x, self.y), True, False)
-        print("neighbors ", neighbors)
+        # print("neighbors ", neighbors)
         # use 0,0 move to represent placing bomb
         neighbors.append((self.x, self.y))
 
         for move in neighbors:
-            print("getting features")
-            print('check', move)
+            # print("getting features")
+            # print('check', move)
             features = self.get_features(wrld, move)
-            print(features)
+            # print(features)
             q = self.calc_Q(features)
             
             # print('check', move, q)
@@ -146,9 +146,7 @@ class TestCharacter(CharacterEntity):
     
     def should_drop_bomb(self, wrld, position,distance):
         dx, dy = self.extract_move(position)
-
-        print("dx,dy", (dx,dy))
-        print(dx ==0 and dy==0 and not(self.bomb_location) and distance ==0)
+        # print("dx,dy", (dx,dy))
         if dx ==0 and dy==0 and not(self.bomb_location):
             return 1
         else: 
@@ -157,18 +155,18 @@ class TestCharacter(CharacterEntity):
     def get_exit_path(self,wrld,position): 
         goals = [wrld.exitcell,(7,14), (7,10),(7,6),(7,2)]
         for i in range(len(goals)):
-            print("trying ", goals[i])
+            # print("trying ", goals[i])
             if goals[i]==(self.x,self.y):
                 return [],0
             came_from, cost_incurred = self.A_star(wrld,(self.x,self.y),goals[i],False)
     
             path = self.get_path((self.x,self.y),came_from, goals[i])
             if path != []:
-                print("GOAL = ", goals[i])
+                # print("GOAL = ", goals[i])
                 distance = self.get_Gn(position,path[0])
                 return path,distance
         else:
-            print("NO GOAL FOUND")
+            # print("NO GOAL FOUND")
             return [], 0
             
     def get_nearest_monst_path(self,wrld,position):
@@ -179,20 +177,33 @@ class TestCharacter(CharacterEntity):
 
 
             if len(monsters) ==1:
-                closest_monster = monsters[0]
+                came_from, cost_incurred = self.A_star(wrld,position,monsters[0],True)
+                path = self.get_path(position,came_from, monsters[0])
+                return path
             else:
-                monst1_dist = self.get_Gn(position,monsters[0])
-                monst2_dist = self.get_Gn(position,monsters[1])
+                came_from, cost_incurred = self.A_star(wrld,position,monsters[0],True)
+                path1 = self.get_path(position,came_from, monsters[0])
+                monst1_dist = len(path1)
+                came_from, cost_incurred = self.A_star(wrld,position,monsters[1],True)
+                path2 = self.get_path(position,came_from, monsters[1])
+                monst2_dist = len(path2)
+                monst1_man_dist = self.get_Gn(position,monsters[0])
+                monst2_man_dist = self.get_Gn(position,monsters[1])
                 if monst1_dist < monst2_dist:
-                    closest_monster = monsters[0]
+                    return path1
+                elif monst1_man_dist < monst2_man_dist:
+                    return path1
                 else:
-                    closest_monster = monsters[1]
-            came_from, cost_incurred = self.A_star(wrld,position,closest_monster,True)
+                    return path2
+            #         closest_monster = monsters[0]
+            #     else:
+            #         closest_monster = monsters[1]
+            # came_from, cost_incurred = self.A_star(wrld,position,closest_monster,True)
             
-            path = self.get_path(position,came_from, closest_monster)
+            # path = self.get_path(position,came_from, closest_monster)
           
-            # print(path)
-            return path
+            # # print(path)
+            # return path
         else:
             return []
     
@@ -253,8 +264,7 @@ class TestCharacter(CharacterEntity):
         # print("v_m = ", v_m)
         # print("v_e = ", v_e)
         cosine =np.dot(v_m,v_e)/(norm(v_m)*norm(v_e))#,4
-
-        print("Cosine Similarity:", cosine)
+        # print("Cosine Similarity:", cosine)
         return cosine
     
     def get_monster_position(self, wrld):
